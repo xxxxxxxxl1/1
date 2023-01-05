@@ -1,0 +1,134 @@
+import pandas as pd
+import numpy as np
+import warnings
+warnings.filterwarnings("ignore")
+
+#合并表，分别为train.xlsx和est.xlsx
+def merge1(file1,file2):
+    data1=pd.read_excel(file1)
+    data1=pd.DataFrame(data1)
+   
+
+    data2=pd.read_excel(file2)
+    data2=pd.DataFrame(data2)
+
+    result=pd.merge(data1[['id','B1','B2','B3','B4','B5','B6','B7','B8','B9','B10','B11','B12','B13','B14','B15','B16','B17','B18','B19','B20','B21','B22','B23','B24']],data2[['id','A1','A2','A3','A4','A5','A6','A7','A8']],on='id',how='outer')
+
+    result.to_excel('/home/workspace/output/data/toUser/train/train_1.xlsx')
+
+if __name__=="__main__":
+    merge1("/home/workspace/output/data/toUser/train/bhv_train.xlsx","/home/workspace/output/data/toUser/train/cust_train.xlsx")
+
+def merge2(file1,file2):
+    data1=pd.read_excel(file1)
+    data1=pd.DataFrame(data1)
+   
+
+    data2=pd.read_excel(file2)
+    data2=pd.DataFrame(data2)
+
+    result=pd.merge(data1[['id','B1','B2','B3','B4','B5','B6','B7','B8','B9','B10','B11','B12','B13','B14','B15','B16','B17','B18','B19','B20','B21','B22','B23','B24','A1','A2','A3','A4','A5','A6','A7','A8']],data2[['id','label']],on='id',how='outer')
+
+    result.to_excel('/home/workspace/output/data/toUser/train/train.xlsx')
+
+if __name__=="__main__":
+    merge2("/home/workspace/output/data/toUser/train/train_1.xlsx","/home/workspace/output/data/toUser/train/train_label.xlsx")
+
+def merge3(file1,file2):
+    data1=pd.read_excel(file1)
+    data1=pd.DataFrame(data1)
+   
+
+    data2=pd.read_excel(file2)
+    data2=pd.DataFrame(data2)
+
+    result=pd.merge(data1[['id','B1','B2','B3','B4','B5','B6','B7','B8','B9','B10','B11','B12','B13','B14','B15','B16','B17','B18','B19','B20','B21','B22','B23','B24']],data2[['id','A1','A2','A3','A4','A5','A6','A7','A8']],on='id',how='outer')
+
+    result.to_excel('/home/workspace/output/data/toUser/test/est.xlsx')
+
+if __name__=="__main__":
+    merge3("/home/workspace/output/data/toUser/test/bhv_test.xlsx","/home/workspace/output/data/toUser/test/cust_test.xlsx")
+
+
+
+train = pd.read_excel('/home/workspace/output/data/toUser/train/train.xlsx')
+test = pd.read_excel('/home/workspace/output/data/toUser/test/est.xlsx')
+
+# 目标变量分布分析
+print(train['label'].value_counts())
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+sns.countplot(train['label'])
+plt.title('label-目标变量的分布')
+plt.show()
+
+col = train.columns.tolist()[1:]
+def missing(df, columns):
+    """
+    使用众数填充缺失值
+    df[i].mode()[0] 获取众数第一个值
+    """
+    col = columns
+    for i in col:
+        df[i].fillna(df[i].mode()[0], inplace=True)
+        df[i] = df[i].astype('float')
+
+
+missing(train, col)
+
+
+
+
+# 将object类型转成folat
+# train = train.convert_objects(convert_numeric=True)
+
+
+# 相关性分析
+train_tmp1 = train[
+    ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10', 'B11', 'B12', 'B13',
+                             'B14', 'B15', 'B16', 'B17', 'B18', 'B19', 'B20', 'B21', 'B22', 'B23', 'B24', 'A1', 'A2',
+                             'A3', 'A4', 'A5', 'A6', 'A7', 'A8','label']]
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 指定默认字体
+plt.rcParams['axes.unicode_minus'] = False  # 解决保存图像是负号'-'显示为方块的问题
+sns.heatmap(train_tmp1.corr(), cmap="YlGnBu", annot=True)
+plt.title("相关性分析图")
+plt.show()
+# 建立特征数据和标签数据
+X = train[['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10', 'B11', 'B12', 'B13',
+                             'B14', 'B15', 'B16', 'B17', 'B18', 'B19', 'B20', 'B21', 'B22', 'B23', 'B24', 'A1', 'A2',
+                             'A3', 'A4', 'A5', 'A6', 'A7', 'A8']]
+y = train['label']
+
+from sklearn.model_selection import train_test_split
+# 数据集拆分
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+X=X_train
+y=X_test
+
+import lightgbm as lgb
+# 建模  拟合  预测
+clf = lgb.LGBMClassifier()
+clf.fit(X_train, y_train)
+y_pred = clf.predict(X_test)
+# 模型评估
+accuracy = accuracy_score(y_pred, y_test)
+print('LightGBM Model accuracy score: {0:0.4f}'.format(accuracy_score(y_test, y_pred)))
+print("precision :", precision_score(y_test, y_pred), "\n")
+print("Recall :", recall_score(y_test, y_pred), "\n")
+print("f1 score:", f1_score(y_test, y_pred), "\n")
+
+y_pred_train = clf.predict(X_train)
+print('Training-set accuracy score: {0:0.4f}'.format(accuracy_score(y_train, y_pred_train)))
+# 查看是否过拟合
+print('Training set score: {:.4f}'.format(clf.score(X_train, y_train)))
+print('Test set score: {:.4f}'.format(clf.score(X_test, y_test)))
+
+
+test_data=test[['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10', 'B11', 'B12', 'B13',
+                             'B14', 'B15', 'B16', 'B17', 'B18', 'B19', 'B20', 'B21', 'B22', 'B23', 'B24', 'A1', 'A2',
+                             'A3', 'A4', 'A5', 'A6', 'A7', 'A8']]
+np.set_printoptions(threshold=np.inf)
+# print(len(result))
+
+result_1=clf.predict(test_data)
+result_2=clf.predict_proba(test_data)
