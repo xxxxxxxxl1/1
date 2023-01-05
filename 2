@@ -1,0 +1,138 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn import preprocessing
+from sklearn.model_selection import train_test_split
+from lightgbm import LGBMRegressor
+from xgboost import XGBRegressor
+import sklearn.metrics as metrics
+import math
+import seaborn as sns  # 统计数据可视化
+
+train = pd.read_excel('/home/workspace/output/data/toUser/train/train.xlsx')
+c_train = train.copy()
+c_train = c_train.drop(columns=['index'])
+# 用Pandas工具查看数据
+print(c_train.head())
+
+# 计算每个特征缺失值的百分比
+NAN = [(c, c_train[c].isna().mean() * 100) for c in c_train]
+NAN = pd.DataFrame(NAN, columns=["column_name", "percentage"])
+NAN = NAN[NAN.percentage > 50]
+print(NAN.sort_values("percentage", ascending=False))
+
+
+
+
+# 区分数值型特征和分类型特征
+df = c_train
+object_columns_df = df.select_dtypes(include=['object'])
+numerical_columns_df = df.select_dtypes(exclude=['object'])
+
+print(object_columns_df.dtypes)
+print(numerical_columns_df.dtypes)
+
+# 特征变量空值情况统计
+null_counts = object_columns_df.isnull().sum()
+print("每个特征变量空值的数量:\n{}".format(null_counts))
+
+# 每个数值型特征变量null值得统计
+null_counts = numerical_columns_df.isnull().sum()
+print("Number of null values in each column:\n{}".format(null_counts))
+
+# 使用 众数填充
+for i in c_train:
+
+    mod=c_train[i][1].mode()
+    for j in c_train[i][1]:
+        if j==' ':
+            j=mod
+
+
+# 计算每个特征缺失值的百分比
+NAN = [(c, c_train[c].isna().mean() * 100) for c in c_train]
+NAN = pd.DataFrame(NAN, columns=["column_name", "percentage"])
+NAN = NAN[NAN.percentage > 50]
+print(NAN.sort_values("percentage", ascending=False))
+#
+#
+#
+#
+# 区分数值型特征和分类型特征
+df = c_train
+object_columns_df = df.select_dtypes(include=['object'])
+numerical_columns_df = df.select_dtypes(exclude=['object'])
+
+print(object_columns_df.dtypes)
+print(numerical_columns_df.dtypes)
+
+# 特征变量空值情况统计
+null_counts = object_columns_df.isnull().sum()
+print("每个特征变量空值的数量:\n{}".format(null_counts))
+
+# 每个数值型特征变量null值得统计
+null_counts = numerical_columns_df.isnull().sum()
+print("Number of null values in each column:\n{}".format(null_counts))
+
+
+
+
+
+
+
+
+
+
+
+
+# 连接
+df_final = pd.concat([object_columns_df, numerical_columns_df], axis=1, sort=False)
+print(df_final.head())
+
+# 建立特征数据和标签数据
+df_train = df_final.drop(['id' ], axis=1)
+target = df_train['label']
+df_train = df_train.drop(['label'], axis=1)
+# 数据集拆分
+x_train, x_test, y_train, y_test = train_test_split(df_train, target, test_size=0.2, random_state=0)
+
+# 建模
+lgbm = LGBMRegressor(objective='regression',
+                     num_leaves=4,
+                     learning_rate=0.01,
+                     n_estimators=12000,
+                     max_bin=200,
+                     bagging_fraction=0.75,
+                     bagging_freq=5,
+                     bagging_seed=7,
+                     feature_fraction=0.4)
+
+lgbm.fit(x_train, y_train, eval_metric='rmse')  # 拟合
+predict = lgbm.predict(x_test)  # 预测
+# 画图
+plt.plot(range(y_test.shape[0]), y_test, color="blue", linewidth=1.5, linestyle="-")
+plt.plot(range(predict.shape[0]), predict, color="red", linewidth=1.5, linestyle="-.")
+plt.legend(['真实值', '预测值'])
+plt.title("真实值与预测值比对图")
+plt.show()  # 显示图片
+# 模型评估
+print('可解释方差值：{}'.format(round(metrics.explained_variance_score(y_test, predict), 2)))
+print('平均绝对误差：{}'.format(round(metrics.mean_absolute_error(y_test, predict), 2)))
+print('均方误差：{}'.format(round(metrics.mean_squared_error(y_test, predict), 2)))
+print('R方值：{}'.format(round(metrics.r2_score(y_test, predict), 2)))
+
+# 模型特征重要性
+df_feature = pd.DataFrame(columns=['columns', 'feature_importances'])
+df_feature['columns'] = df_train.columns
+df_feature['feature_importances'] = lgbm.feature_importances_
+df_feature.to_excel('feature_importances.xlsx')
+
+test=pd.read_excel('/home/workspace/output/data/toUser/test/est.xlsx')
+for i in test:
+
+    mod=test[i][1].mode()
+    for j in test[i][1]:
+        if j==' ':
+            j=mod
+test = test.drop(columns=['index'])
+c_test=test.drop('id',axis =1,inplace = False) #axis参数默认为0
+print(lgbm.predict(c_test))
